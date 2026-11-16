@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpenRange · Servidores Jellyfin da TV</title>
+<!-- Aberta no celular/PC pelo QR Code da TV (tela "Gerenciar pelo celular"). Fala só com o portal do PC
+     (/api/par/CODIGO); quem contata os servidores Jellyfin é a TV. A senha passa pelo portal em memória,
+     é entregue uma vez à TV e não é gravada nem registrada em log. -->
+<style>
+  body { margin: 0; background: #101010; color: #fff; font: 17px/1.4 -apple-system, Roboto, Arial, sans-serif; }
+  main { max-width: 560px; margin: 0 auto; padding: 18px 16px 60px; }
+  h1 { font-size: 22px; margin: 6px 0 2px; } h1 span { color: #00a4dc; }
+  h2 { font-size: 15px; color: #00a4dc; text-transform: uppercase; letter-spacing: 1px; margin: 26px 0 8px; }
+  p.sub { color: #999; margin: 0 0 8px; font-size: 15px; }
+  .sv { background: #1c1c1c; border-radius: 8px; padding: 12px 14px; margin-bottom: 8px; }
+  .sv b { display: block; font-size: 18px; } .sv small { color: #999; word-break: break-all; }
+  .sv .uso { color: #00a4dc; font-weight: 600; }
+  .sv div { margin-top: 10px; }
+  button { font: inherit; border: 0; border-radius: 6px; padding: 10px 16px; margin-right: 8px; background: #303030; color: #fff; }
+  button.pri { background: #00a4dc; font-weight: 600; } button.per { background: #5a1f24; }
+  button:disabled { opacity: .5; }
+  label { display: block; color: #bbb; font-size: 15px; margin: 12px 0 4px; }
+  input[type=text], input[type=password], input[type=url] { width: 100%; box-sizing: border-box; font: inherit; padding: 12px; border-radius: 6px;
+    border: 1px solid #444; background: #1c1c1c; color: #fff; }
+  .linha-check { margin: 14px 0; color: #ddd; }
+  #recado { position: sticky; bottom: 0; margin-top: 20px; padding: 12px 14px; border-radius: 8px; background: #1c1c1c; color: #ddd; min-height: 24px; }
+  #recado.ok { background: #12381f; } #recado.ruim { background: #5a1f24; }
+</style>
+</head>
+<body>
+<main>
+  <h1><span>tv</span>lab · servidores Jellyfin da TV</h1>
+  <p class="sub" id="cod"></p>
+  <h2>Na TV agora</h2>
+  <div id="lista"><p class="sub">carregando…</p></div>
+  <h2>Adicionar servidor</h2>
+  <form id="novo" autocomplete="off">
+    <label for="url">Endereço (pode colar o link inteiro)</label>
+    <input id="url" type="text" inputmode="url" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="192.168.0.10  ou  https://jellyfin.exemplo.com" required>
+    <label for="usuario">Usuário (opcional: já deixa logado na TV)</label>
+    <input id="usuario" type="text" autocapitalize="none" autocorrect="off" spellcheck="false">
+    <label for="senha">Senha</label>
+    <input id="senha" type="password">
+    <div class="linha-check"><label style="display:inline;color:#ddd"><input type="checkbox" id="usar" checked> Passar a usar este servidor na TV</label></div>
+    <button class="pri" type="submit">Adicionar na TV</button>
+  </form>
+  <div id="recado">Mantenha a tela "Gerenciar pelo celular" aberta na TV.</div>
+</main>
+<script>
+(function () {
+  'use strict';
+  var codigo = (/[?&]c=([A-Za-z0-9]+)/.exec(location.search) || [])[1] || '';
+  var base = '/api/par/' + encodeURIComponent(codigo);
+  var lista = document.getElementById('lista'), recado = document.getElementById('recado');
+  var esperando = false, ultimoResultado = null;
+  document.getElementById('cod').textContent = codigo ? 'Código ' + codigo.toUpperCase() : 'Abra esta página pelo QR Code da TV.';
+
+  function diz(msg, classe) { recado.textContent = msg; recado.className = classe || ''; }
+  function pedir(metodo, caminho, corpo) {
+    return fetch(base + caminho, { method: metodo, headers: corpo ? { 'Content-Type': 'application/json' } : {},
+                                   body: corpo ? JSON.stringify(corpo) : undefined })
+      .then(function (r) { return r.json().then(function (d) { if (!r.ok) throw new Error(d.erro || 'HTTP ' + r.status); return d; }); });
+  }
+  function comando(c, texto) {
+    esperando = true; ultimoResultado = null;
+    diz(texto + ' Aguardando a TV…');
+    return pedir('POST', '/comando', c).then(null, function (e) { esperando = false; diz(e.message, 'ruim'); });
+  }
+  function botao(texto, classe, fn) {
+    var b = document.createElement('button');
+    b.textContent = texto; b.type = 'button'; if (classe) b.className = classe;
+    b.addEventListener('click', fn);
+    return b;
+  }
+  function desenhar(svs) {
+    lista.innerHTML = '';
+    if (!svs.length) { lista.innerHTML = '<p class="sub">Nenhum servidor na TV ainda.</p>'; return; }
+    svs.forEach(function (s) {
+      var d = document.createElement('div'); d.className = 'sv';
+      var b = document.createElement('b'); b.textContent = s.nome || s.url; d.appendChild(b);
+      var sm = document.createElement('small'); sm.textContent = s.url + (s.usuario ? ' · ' + s.usuario : ' · sem login'); d.appendChild(sm);
+      var a = document.createElement('div');
+      if (s.emUso) { var u = document.createElement('span'); u.className = 'uso'; u.textContent = '● em uso   '; a.appendChild(u); }
+      else a.appendChild(botao('Usar na TV', 'pri', function () { comando({ tipo: 'usar', url: s.url }, 'Trocando de servidor.'); }));
+      a.appendChild(botao('Remover', 'per', function () {
+        if (confirm('Remover "' + (s.nome || s.url) + '" da TV?')) comando({ tipo: 'remover', url: s.url }, 'Removendo.');
+      }));
+      d.appendChild(a);
+      lista.appendChild(d);
+    });
+  }
+  function atualizar() {
+    if (!codigo) return;
+    pedir('GET', '').then(function (d) {
+      desenhar((d.estado && d.estado.servidores) || []);
+      if (d.resultado && JSON.stringify(d.resultado) !== ultimoResultado) {
+        ultimoResultado = JSON.stringify(d.resultado);
+        if (esperando) { esperando = false; diz(d.resultado.msg, d.resultado.ok ? 'ok' : 'ruim'); if (d.resultado.ok) document.getElementById('novo').reset(); }
+      }
+    }, function (e) { diz(e.message + '. Gere um novo código na TV.', 'ruim'); });
+  }
+  document.getElementById('novo').addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    var url = document.getElementById('url').value.trim();
+    if (!url) return;
+    comando({ tipo: 'adicionar', url: url, usuario: document.getElementById('usuario').value.trim(),
+              senha: document.getElementById('senha').value, usar: document.getElementById('usar').checked }, 'Enviado.');
+    document.getElementById('senha').value = '';
+  });
+  atualizar();
+  setInterval(atualizar, 2000);
+})();
+</script>
+</body>
+</html>

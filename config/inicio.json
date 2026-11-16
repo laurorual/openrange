@@ -1,0 +1,9 @@
+{
+  "_leia": "Launcher (www/inicio/). favoritos: ids de apps do catálogo real da NetRange, na ordem em que aparecem. substituir_loja: com o DNS redirecionando também ver.netrange.com, true faz o botão da loja abrir o launcher (false = loja normal). Relido a cada pedido, sem reiniciar o portal.",
+  "favoritos": [
+    829,
+    55,
+    870
+  ],
+  "substituir_loja": true
+}

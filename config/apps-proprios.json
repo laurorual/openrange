@@ -1,0 +1,49 @@
+{
+  "_leia": "Apps que o tools/portal.py injeta no catálogo da NetRange. {PC_IP} vira o IP de config/rede.env. Editar não exige reiniciar o portal: ele relê a cada pedido (reabra a loja na TV). Campos: id (>= 990001), name, url, description, cor (fundo do ícone gerado), rotulo (texto do ícone; padrão = name), inicio (true = aparece na tela inicial).",
+  "apps": [
+    {
+      "id": 990002,
+      "name": "OpenRange · Início",
+      "url": "http://{PC_IP}/inicio/",
+      "description": "Launcher do OpenRange: nossos apps e os favoritos da loja.",
+      "cor": "#238636",
+      "inicio": true,
+      "rotulo": "OpenRange início"
+    },
+    {
+      "id": 990004,
+      "name": "Jellyfin (OpenRange)",
+      "url": "http://{PC_IP}/jellyfin/",
+      "description": "Cliente Jellyfin do OpenRange: toca direto no player nativo da TV (H.264/HEVC até 1080p) ou transcodificado em HLS.",
+      "cor": "#aa5cc3",
+      "inicio": true,
+      "rotulo": "Jellyfin"
+    },
+    {
+      "id": 990005,
+      "name": "Web Video Caster",
+      "url": "https://vewd.webvideocaster.com/",
+      "description": "Cliente Web Video Caster.",
+      "cor": "#f5c211",
+      "inicio": true
+    },
+    {
+      "id": 990001,
+      "name": "OpenRange · Teste de recursos",
+      "url": "http://{PC_IP}/teste/",
+      "description": "Mostra o que o navegador da TV suporta (JS, CSS, vídeo, DRM) e envia o relatório para o PC.",
+      "cor": "#1f6feb",
+      "inicio": true,
+      "rotulo": "OpenRange teste"
+    },
+    {
+      "id": 990003,
+      "name": "OpenRange · Teste de vídeo",
+      "url": "http://{PC_IP}/video/",
+      "description": "Toca MP4, WebM e HLS (nativo e hls.js) gerados no PC e mede fps, quadros perdidos, som e seek.",
+      "cor": "#8250df",
+      "inicio": false,
+      "rotulo": "OpenRange vídeo"
+    }
+  ]
+}

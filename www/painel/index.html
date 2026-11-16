@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpenRange · Painel</title>
+<!-- Control panel (M3.3). Opened in the PC's own browser: http://localhost:8090/painel/
+     API: /painel/api/* (tools/painel.py), which only answers the PC itself. -->
+<style>
+  :root { --fundo: #0e1116; --cartao: #161b22; --borda: #2d333b; --texto: #e6edf3; --fraco: #8b949e;
+          --azul: #539bf5; --verde: #3fb950; --amarelo: #d29922; --vermelho: #f85149; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--fundo); color: var(--texto); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  header { position: sticky; top: 0; z-index: 5; background: rgba(14,17,22,.96); border-bottom: 1px solid var(--borda); }
+  .topo { max-width: 1100px; margin: 0 auto; padding: 12px 16px 0; display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+  .topo h1 { margin: 0; font-size: 20px; } .topo h1 span { color: var(--azul); }
+  #resumo { color: var(--fraco); font-size: 13px; }
+  nav { max-width: 1100px; margin: 0 auto; padding: 0 10px; display: flex; overflow-x: auto; }
+  nav a { padding: 10px 12px; color: var(--fraco); text-decoration: none; border-bottom: 2px solid transparent; white-space: nowrap; }
+  nav a.ativa { color: var(--texto); border-color: var(--azul); }
+  main { max-width: 1100px; margin: 0 auto; padding: 18px 16px 80px; }
+  section { display: none; } section.ativa { display: block; }
+  h2 { font-size: 17px; margin: 22px 0 10px; } h2:first-child { margin-top: 0; }
+  p.dica { color: var(--fraco); margin: 4px 0 12px; font-size: 14px; }
+  .grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+  .cartao { background: var(--cartao); border: 1px solid var(--borda); border-radius: 8px; padding: 14px 16px; }
+  .cartao h3 { margin: 0 0 8px; font-size: 13px; text-transform: uppercase; letter-spacing: .5px; color: var(--fraco); font-weight: 600; }
+  .linha { display: flex; gap: 8px; align-items: baseline; margin: 3px 0; }
+  .linha .k { color: var(--fraco); min-width: 92px; }
+  .ponto { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--fraco); margin-right: 6px; }
+  .ok .ponto, .ponto.ok { background: var(--verde); } .aviso .ponto, .ponto.aviso { background: var(--amarelo); }
+  .ruim .ponto, .ponto.ruim { background: var(--vermelho); }
+  button { font: inherit; border: 1px solid var(--borda); background: #21262d; color: var(--texto); border-radius: 6px; padding: 6px 12px; cursor: pointer; }
+  button:hover { border-color: #8b949e; } button:disabled { opacity: .5; cursor: default; }
+  button.pri { background: #1f6feb; border-color: #1f6feb; color: #fff; } button.perigo { color: var(--vermelho); }
+  button.mini { padding: 2px 8px; font-size: 13px; }
+  input, textarea, select { font: inherit; color: var(--texto); background: #0d1117; border: 1px solid var(--borda); border-radius: 6px; padding: 7px 9px; width: 100%; }
+  textarea { min-height: 90px; font-family: ui-monospace, monospace; font-size: 13px; }
+  input[type=checkbox] { width: auto; } input[type=color] { width: 48px; height: 34px; padding: 2px; }
+  label { display: block; color: var(--fraco); font-size: 13px; margin: 10px 0 3px; }
+  label.check { display: flex; gap: 8px; align-items: center; color: var(--texto); font-size: 15px; }
+  .acoes { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; align-items: center; }
+  pre { background: #0d1117; border: 1px solid var(--borda); border-radius: 6px; padding: 10px 12px; overflow: auto;
+        font: 12.5px/1.45 ui-monospace, monospace; white-space: pre-wrap; word-break: break-all; }
+  #log-texto { height: 60vh; margin: 0; }
+  .barra { position: sticky; top: 92px; }
+  #recado { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); max-width: 92vw; padding: 10px 18px; border-radius: 8px;
+            background: #21262d; border: 1px solid var(--borda); opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 20; }
+  #recado.visivel { opacity: 1; } #recado.ruim { background: #3d1418; border-color: var(--vermelho); } #recado.ok { background: #12301b; border-color: var(--verde); }
+  #faixa { display: none; background: #3a2a07; border: 1px solid var(--amarelo); border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; }
+  #faixa.visivel { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  #bloqueio { display: none; } body.bloqueado #bloqueio { display: block; } body.bloqueado main > section { display: none; }
+  /* apps */
+  .app { display: flex; gap: 14px; align-items: center; background: var(--cartao); border: 1px solid var(--borda); border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; }
+  .app img { width: 48px; height: 62px; object-fit: cover; border-radius: 4px; background: #2d333b; flex: none; }
+  .app .info { flex: 1; min-width: 0; } .app .info b { display: block; } .app small { color: var(--fraco); display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .app .botoes { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
+  .secao-titulo { color: var(--azul); font-size: 13px; text-transform: uppercase; letter-spacing: .5px; margin: 16px 0 6px; }
+  .etiqueta { font-size: 11px; color: var(--fraco); border: 1px solid var(--borda); border-radius: 10px; padding: 0 7px; margin-left: 6px; }
+  #editor { display: none; } #editor.visivel { display: block; }
+  .duas { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
+  .previa { display: flex; gap: 14px; align-items: flex-end; margin-top: 8px; }
+  .previa img { width: 96px; height: 125px; object-fit: cover; border-radius: 6px; background: #2d333b; }
+  /* store */
+  /* minmax(0,1fr): both columns keep the same width whatever their content (1fr alone grows to min-content) */
+  .colunas { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; }
+  .lista-loja .app { padding: 6px 10px; gap: 10px; margin-bottom: 6px; }
+  .lista-loja .app img { width: 32px; height: 42px; }
+  .lista-loja .app b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .lista-loja .app .botoes { flex-wrap: nowrap; }
+  /* wizard */
+  .passo { display: flex; gap: 14px; background: var(--cartao); border: 1px solid var(--borda); border-radius: 8px; padding: 14px 16px; margin-bottom: 10px; }
+  .passo .n { flex: none; width: 30px; height: 30px; border-radius: 50%; background: #21262d; display: flex; align-items: center; justify-content: center; font-weight: 700; }
+  .passo.ok .n { background: var(--verde); color: #000; }
+  .passo .corpo { flex: 1; min-width: 0; } .passo h3 { margin: 2px 0 6px; font-size: 16px; }
+  .grande { font-size: 26px; font-weight: 700; color: var(--azul); letter-spacing: .5px; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; } td, th { text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--borda); }
+  th { color: var(--fraco); font-weight: 500; }
+  @media (max-width: 720px) { .colunas, .duas { grid-template-columns: minmax(0, 1fr); } .app { flex-wrap: wrap; } .barra { top: 0; position: static; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="topo"><h1><span>Open</span>Range · painel</h1><span id="resumo">carregando…</span></div>
+  <nav id="abas">
+    <a href="#estado" data-aba="estado">Estado</a>
+    <a href="#passos" data-aba="passos">Primeiros passos</a>
+    <a href="#apps" data-aba="apps">Apps</a>
+    <a href="#loja" data-aba="loja">Loja</a>
+    <a href="#rede" data-aba="rede">Rede e DNS</a>
+    <a href="#logs" data-aba="logs">Logs</a>
+  </nav>
+</header>
+<main>
+  <div id="bloqueio" class="cartao"><h3>Sem acesso</h3><p id="bloqueio-msg"></p></div>
+  <div id="faixa"><span>Uma mudança só vale depois de reiniciar o serviço.</span><button class="pri" data-acao="reiniciar">Reiniciar agora</button></div>
+
+  <section id="aba-estado">
+    <div class="grade" id="cartoes"></div>
+    <h2>Diagnóstico completo</h2>
+    <p class="dica">O mesmo que <code>tools/openrange.sh saude</code>: serviço, DNS, portas, firewall, certificado, internet.</p>
+    <div class="acoes"><button data-acao="diagnostico">Rodar diagnóstico</button><span id="diag-estado" class="dica"></span></div>
+    <pre id="diag-saida" hidden></pre>
+  </section>
+
+  <section id="aba-passos">
+    <p class="dica">Para ligar a TV ao OpenRange (ou depois de trocar de roteador). As bolinhas atualizam sozinhas.</p>
+    <div class="passo" id="passo-1"><div class="n">1</div><div class="corpo">
+      <h3>IP da TV</h3>
+      <p class="dica">Na TV: Configurações → Rede → informações. Dica: reserve esse IP no roteador (DHCP fixo).</p>
+      <div class="acoes"><input id="tv-ip" style="max-width:200px" placeholder="192.168.0.50" inputmode="decimal"><button class="pri" data-acao="salvar-tv-ip">Salvar</button></div>
+      <details style="margin-top:10px"><summary>Aparelhos na rede</summary>
+        <p class="dica">Quem já usou o nosso DNS aparece primeiro. Clique para usar o IP.</p>
+        <table id="vizinhos"></table></details>
+    </div></div>
+    <div class="passo" id="passo-2"><div class="n">2</div><div class="corpo">
+      <h3>DNS da TV = este PC</h3>
+      <p class="dica">Melhor no roteador (LAN/DHCP): DNS primário = este PC, secundário = 1.1.1.1, e a rede da TV em automático; com o PC desligado a TV volta sozinha para a loja original. Ou só na TV: Rede → configuração manual → DNS (sem o PC, a TV fica sem internet):</p>
+      <div class="grande" id="pc-ip">…</div>
+      <p class="dica" id="passo-2-estado"></p>
+    </div></div>
+    <div class="passo" id="passo-3"><div class="n">3</div><div class="corpo">
+      <h3>O DNS responde certo</h3>
+      <p class="dica">Os domínios da loja apontam para este PC e o resto vai para a internet.</p>
+      <div class="acoes"><button data-acao="teste-dns">Testar DNS</button></div>
+      <table id="dns-resultado"></table>
+    </div></div>
+    <div class="passo" id="passo-4"><div class="n">4</div><div class="corpo">
+      <h3>Botão da loja abre o launcher</h3>
+      <p class="dica">Na TV, aperte o botão da loja (ou abra a NetRange). Deve abrir a tela “OpenRange”.</p>
+      <p class="dica" id="passo-4-estado"></p>
+    </div></div>
+  </section>
+
+  <section id="aba-apps">
+    <p class="dica">Os apps que aparecem no launcher da TV e no começo da loja. A ordem aqui é a ordem na TV. Use <code>{PC_IP}</code> no endereço para apontar para este PC.</p>
+    <div class="acoes" style="margin:0 0 12px"><button class="pri" data-acao="novo-app">+ Novo app</button></div>
+    <div class="cartao" id="editor">
+      <h3 id="editor-titulo">Novo app</h3>
+      <div class="duas">
+        <div><label for="ed-nome">Nome</label><input id="ed-nome" maxlength="60"></div>
+        <div><label for="ed-secao">Seção no launcher</label><input id="ed-secao" maxlength="40" list="secoes"><datalist id="secoes"></datalist></div>
+      </div>
+      <label for="ed-url">Endereço</label><input id="ed-url" placeholder="http://{PC_IP}/meuapp/  ou  https://…">
+      <label for="ed-desc">Descrição (aparece no rodapé do launcher)</label><input id="ed-desc" maxlength="300">
+      <label class="check" style="margin-top:12px"><input type="checkbox" id="ed-inicio"> Também na tela inicial da TV (blocos da NetRange)</label>
+      <label>Ícone</label>
+      <div class="previa">
+        <img id="ed-previa" alt="">
+        <div>
+          <div class="acoes" style="margin:0"><input type="color" id="ed-cor" value="#316dca" title="cor de fundo"><input id="ed-rotulo" maxlength="30" placeholder="texto do ícone (padrão: nome)" style="max-width:240px"></div>
+          <div class="acoes"><input type="file" id="ed-arquivo" accept="image/png,image/jpeg,image/webp,image/svg+xml" style="max-width:260px">
+            <button class="mini perigo" data-acao="remover-icone" id="ed-remover-icone" hidden>Voltar ao ícone gerado</button></div>
+          <p class="dica" style="margin:4px 0 0">Imagem própria: PNG/JPEG/WebP/SVG até 300 KB, de preferência 192×250.</p>
+        </div>
+      </div>
+      <div class="acoes"><button class="pri" data-acao="salvar-app">Salvar</button><button data-acao="cancelar-app">Cancelar</button></div>
+    </div>
+    <div id="lista-apps"></div>
+  </section>
+
+  <section id="aba-loja">
+    <p class="dica">Apps da loja da NetRange que ficam em “Da loja” no launcher. A loja inteira continua no bloco “Loja da TV”.</p>
+    <label class="check"><input type="checkbox" id="substituir-loja"> O botão da loja abre o launcher do OpenRange (desligado = abre a loja original)</label>
+    <div class="colunas" style="margin-top:14px">
+      <div><h2>Favoritos <span class="dica" id="fav-conta"></span></h2><div class="lista-loja" id="favoritos"></div></div>
+      <div><h2>Catálogo <span class="dica" id="cat-conta"></span></h2>
+        <input id="busca-loja" placeholder="buscar por nome ou id" autocomplete="off">
+        <div class="lista-loja" id="catalogo" style="margin-top:10px"></div></div>
+    </div>
+  </section>
+
+  <section id="aba-rede">
+    <div class="duas">
+      <div class="cartao"><h3>TV e PC</h3>
+        <label for="rede-tv">IP da TV</label><input id="rede-tv">
+        <div class="linha" style="margin-top:10px"><span class="k">IP do PC</span><span id="rede-pc"></span></div>
+        <div class="linha"><span class="k">Interface</span><span id="rede-if"></span></div>
+        <div class="linha"><span class="k">Portas</span><span id="rede-portas"></span></div>
+      </div>
+      <div class="cartao"><h3>DNS</h3>
+        <label class="check"><input type="checkbox" id="dns-embutido"> DNS embutido no portal (porta 53)</label>
+        <label for="dns-ups">DNS de fora (um por linha)</label><textarea id="dns-ups" style="min-height:60px"></textarea>
+      </div>
+    </div>
+    <h2>Domínios redirecionados para este PC</h2>
+    <p class="dica">Um por linha (vale também para os subdomínios). Netflix nunca é redirecionada. Os padrões: api-portal-v3.netrange.com e ver.netrange.com.</p>
+    <textarea id="redirects"></textarea>
+    <h2>Logs</h2>
+    <div class="duas" style="max-width:420px">
+      <div><label for="logs-mb">Girar com (MB)</label><input id="logs-mb" type="number" min="1" max="100"></div>
+      <div><label for="logs-manter">Cópias guardadas</label><input id="logs-manter" type="number" min="1" max="10"></div>
+    </div>
+    <div class="acoes"><button class="pri" data-acao="salvar-rede">Salvar</button><button data-acao="teste-dns">Testar DNS</button></div>
+    <table id="dns-resultado-2" style="margin-top:12px"></table>
+  </section>
+
+  <section id="aba-logs">
+    <div class="acoes barra" style="margin:0 0 10px">
+      <select id="log-arquivo" style="max-width:260px">
+        <option value="portal">portal.log (pedidos da TV)</option>
+        <option value="eventos">eventos.jsonl (logs dos apps)</option>
+        <option value="dns">dns.log (consultas DNS)</option>
+      </select>
+      <input id="log-filtro" placeholder="filtrar" style="max-width:220px">
+      <label class="check" style="margin:0"><input type="checkbox" id="log-vivo" checked> ao vivo</label>
+      <button data-acao="log-limpar">Limpar tela</button>
+    </div>
+    <pre id="log-texto"></pre>
+  </section>
+</main>
+<div id="recado"></div>
+<script src="painel.js"></script>
+</body>
+</html>

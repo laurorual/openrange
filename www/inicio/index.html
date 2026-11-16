@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1280, initial-scale=1">
+<title>OpenRange · Início</title>
+<link rel="stylesheet" href="/lib/tv.css">
+<style>
+  #topo { height: 96px; padding: 28px 64px 0; display: -webkit-flex; display: flex;
+          -webkit-justify-content: space-between; justify-content: space-between; -webkit-align-items: baseline; align-items: baseline; }
+  #topo h1 { margin: 0; font-size: 40px; font-weight: 700; letter-spacing: .5px; }
+  #topo h1 span { color: #539bf5; }
+  #relogio { font-size: 40px; font-weight: 300; }
+  #data { font-size: 20px; color: #9aa4b1; margin-left: 14px; }
+  #secoes { padding: 0 64px 120px; }
+  h2 { font-size: 24px; font-weight: 500; color: #9aa4b1; margin: 24px 0 14px; }
+  .fileira { display: -webkit-flex; display: flex; -webkit-flex-wrap: wrap; flex-wrap: wrap; margin: 0 -10px; }
+  .bloco { width: 172px; margin: 0 10px 22px; border-radius: 10px; overflow: hidden; background: #1c2128; cursor: pointer; }
+  .bloco img { display: block; width: 172px; height: 224px; object-fit: cover; background: #2d333b; }
+  .bloco .placa { width: 172px; height: 224px; padding: 20px; display: -webkit-flex; display: flex;
+                  -webkit-align-items: center; align-items: center; -webkit-justify-content: center; justify-content: center;
+                  text-align: center; font-size: 26px; font-weight: 700; background: #316dca; }
+  .bloco .nome { padding: 8px 10px; font-size: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .vazio { color: #768390; font-size: 20px; }
+  #rodape { position: fixed; left: 0; right: 0; bottom: 0; height: 84px; padding: 14px 64px;
+            background: rgba(14,17,22,.94); border-top: 1px solid #2d333b; }
+  #descricao { font-size: 20px; height: 28px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #ajuda { font-size: 17px; color: #768390; margin-top: 6px; }
+  #ajuda b { color: #adbac7; font-weight: 500; margin-right: 18px; }
+</style>
+</head>
+<body>
+<div id="topo"><h1><span>Open</span>Range</h1><div><span id="relogio">--:--</span><span id="data"></span></div></div>
+<div id="secoes"><p class="vazio">carregando…</p></div>
+<div id="rodape">
+  <div id="descricao"></div>
+  <div id="ajuda"><b>OK abre</b><b>Voltar sai</b><b><span class="tecla-cor vermelho"></span>recarregar</b><b><span class="tecla-cor azul"></span>teste de recursos</b></div>
+</div>
+<script src="/lib/tv.js"></script>
+<script src="inicio.js"></script>
+</body>
+</html>

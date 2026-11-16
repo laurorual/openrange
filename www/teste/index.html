@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpenRange · Teste de recursos</title>
+<!-- Sem CSS variables, grid, nem nada além de Chrome 47: precisa rodar no Sraf Browser também. -->
+<style>
+  html, body { margin: 0; background: #101418; color: #e6e6e6; font: 20px/1.35 Arial, sans-serif; }
+  #topo { position: fixed; top: 0; left: 0; right: 0; background: #1f6feb; color: #fff; padding: 10px 24px; z-index: 2;
+          display: -webkit-flex; display: flex; -webkit-justify-content: space-between; justify-content: space-between; }
+  #topo b { font-size: 24px; }
+  #tecla { font-family: monospace; }
+  #conteudo { padding: 70px 24px 40px; }
+  h2 { font-size: 22px; color: #8ab4f8; margin: 22px 0 6px; border-bottom: 1px solid #333; }
+  table { border-collapse: collapse; width: 100%; }
+  td { padding: 2px 8px; vertical-align: top; border-bottom: 1px solid #222; font-size: 18px; }
+  td:first-child { font-family: monospace; width: 55%; word-break: break-all; }
+  .sim { color: #7ee787; } .nao { color: #ff7b72; } .talvez { color: #e3b341; } .info { color: #c9d1d9; }
+  #ajuda { color: #999; font-size: 16px; }
+</style>
+</head>
+<body>
+<div id="topo"><b>OpenRange · Teste de recursos</b><span id="estado">testando…</span><span id="tecla">tecla: —</span></div>
+<div id="conteudo">
+  <p id="ajuda">Setas ↑/↓ rolam a página. Cada tecla do controle aparece no topo e vai para o PC.
+     Voltar/Back retorna ao portal. Nada aqui altera a TV: só lê o que o navegador suporta.</p>
+  <div id="saida"></div>
+</div>
+<script src="teste.js"></script>
+</body>
+</html>
