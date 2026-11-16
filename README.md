@@ -39,19 +39,28 @@ The user interface is in Portuguese (Brazil).
 ## Install
 
 ```sh
-git clone https://github.com/laurorual/openrange.git
-cd openrange
-tools/instalar.sh            # run as your user; it calls sudo when needed and asks for the TV's IP
+curl -fsSL https://raw.githubusercontent.com/laurorual/openrange/main/install.sh -o install.sh
+bash install.sh
 ```
 
-The installer creates `config/openrange.json` and a self-signed certificate, and installs:
+Run it as your user (not root); it calls `sudo` when needed and asks for the TV's IP. It downloads the project into
+`~/openrange` (choose another folder with `OPENRANGE_DIR=/path bash install.sh`) and runs `tools/instalar.sh`, which
+creates `config/openrange.json` and a self-signed certificate, and installs:
 - `/etc/systemd/system/openrange.service`: portal and DNS, running as **your** user with only `CAP_NET_BIND_SERVICE`;
 - a polkit rule (or, on old polkit, a sudoers rule) so your user can start, stop and restart that one unit without a
   password;
 - firewalld rules **at runtime only** (never `--permanent`), opening 53/80/443/8090 to the TV's IP. They are added
   when the service starts and removed when it stops.
 
-Check everything with `tools/openrange.sh saude`.
+Check everything with `~/openrange/tools/openrange.sh saude`.
+
+### Update
+
+Run the same two commands again. `install.sh` compares your installation with the `main` branch and applies only the
+differences, then restarts the service. Your settings stay as they are: `config/openrange.json`, your apps and
+icons, the store favorites, certificates and logs. If you had edited a code file, your copy is saved in
+`~/openrange/.openrange/backup/` before it is replaced. There are no releases: `main` is always the current version,
+and the changelog at the end of this page says what changed.
 
 ## Point the TV at OpenRange
 
@@ -68,6 +77,8 @@ through the same steps and shows what the PC sees.
 
 ## Use
 
+Commands run from the install folder (`cd ~/openrange`).
+
 | Command | What it does |
 |---|---|
 | `tools/openrange.sh estado` | quick status |
@@ -81,11 +92,12 @@ network and port changes need a restart.
 ## Uninstall
 
 ```sh
-tools/instalar.sh remover
+~/openrange/tools/instalar.sh remover
+rm -rf ~/openrange
 ```
 
-This removes the unit, the polkit/sudoers rule and any runtime firewall rule. Then undo the DNS change on the router
-or set the TV's network back to automatic. The project folder can simply be deleted.
+The first command removes the unit, the polkit/sudoers rule and any runtime firewall rule. Then undo the DNS change on the router
+or set the TV's network back to automatic.
 
 ## Troubleshooting
 
@@ -114,3 +126,13 @@ tools/sim/rodar.sh limpa    # real install/remove in clean Fedora, Debian and Ub
 
 GPL-3.0-or-later (see `LICENSE`). Bundled third-party files keep their own licenses: hls.js (Apache-2.0),
 qrcode-generator by Kazuhiko Arase (MIT) and the Noto Sans fonts (SIL OFL 1.1, `www/lib/fontes/OFL.txt`).
+
+## Changelog
+
+Newest first. Dates are when the change reached `main`.
+
+### 2026-11-16
+- One-command install and update: `install.sh` downloads `main`, installs the service, and on later runs applies only
+  what changed, keeping your settings.
+- First public version: launcher replacing the store, Jellyfin client, phone pairing by QR code, control panel,
+  installer for Fedora/Debian/Ubuntu, router DNS setup with automatic fallback to the original store.

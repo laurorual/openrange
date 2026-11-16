@@ -123,5 +123,50 @@ for S in "${SISTEMAS[@]}"; do
   podman rm -f "$C" >/dev/null
 done
 
+# 4. one-command install/update (install.sh) from tarballs shaped like GitHub's (Fedora only: same code everywhere)
+if [[ " ${SISTEMAS[*]} " == *" fedora "* ]]; then
+  S=remoto; echo "--- install.sh (fedora)"
+  "$RAIZ/tools/publicar.sh" --tar "$TMP/v1.tar.gz" >/dev/null || erro "publicar.sh --tar falhou"
+  mkdir -p "$TMP/v2" && tar -xzf "$TMP/v1.tar.gz" -C "$TMP/v2"
+  V2="$TMP/v2/openrange-main"
+  echo "<!-- v2 -->" >> "$V2/www/index.html"                       # changed upstream
+  echo "novo" > "$V2/www/novo.txt"                                 # added upstream
+  rm "$V2/www/video/index.html"                                    # removed upstream
+  echo '[]' > "$V2/config/apps-proprios.json"                      # upstream changes a file the user edited
+  tar -czf "$TMP/v2.tar.gz" -C "$TMP/v2" openrange-main
+  C="openrange-remoto-$$"; CONTAINERS+=("$C")
+  podman run -d --name "$C" --systemd=always --hostname remoto localhost/openrange-limpa-fedora /sbin/init >/dev/null || erro "container não subiu"
+  for _ in $(seq 30); do raiz 'systemctl is-system-running 2>/dev/null | grep -qE "running|degraded"' && break; sleep 1; done
+  raiz 'useradd -m -s /bin/bash teste && echo "teste ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/90-teste && chmod 440 /etc/sudoers.d/90-teste'
+  for f in v1.tar.gz v2.tar.gz; do podman cp "$TMP/$f" "$C:/tmp/$f"; done
+  podman cp "$RAIZ/install.sh" "$C:/tmp/install.sh"
+  em_casa() { podman exec -u teste -w /home/teste "$C" bash -c "$1"; }
+  em_casa "echo $TV | OPENRANGE_URL=file:///tmp/v1.tar.gz bash /tmp/install.sh" > "$TMP/r1" 2>&1 \
+    || erro "install.sh (1ª vez) falhou: $(tail -3 "$TMP/r1" | tr '\n' ' ')"
+  raiz 'systemctl is-active -q openrange.service' || erro "install.sh: serviço não ficou ativo"
+  raiz 'grep -qx "WorkingDirectory=/home/teste/openrange" /etc/systemd/system/openrange.service' || erro "install.sh: pasta errada"
+  PC=$(em_casa 'cd openrange && eval "$(python3 tools/config.py env)"; echo $PC_IP')
+  c=$(raiz "curl -s -o /dev/null -m 5 -w '%{http_code}' http://$PC/api/inicio"); [[ $c == 200 ]] || erro "install.sh: /api/inicio → $c"
+  # the user edits settings (panel) and a code file
+  em_casa 'echo >> openrange/config/apps-proprios.json; echo "# meu" >> openrange/tools/repetir.py'
+  t1=$(raiz 'systemctl show -p ActiveEnterTimestampMonotonic --value openrange.service')
+  em_casa "OPENRANGE_URL=file:///tmp/v2.tar.gz bash /tmp/install.sh" > "$TMP/r2" 2>&1 \
+    || erro "install.sh (atualização) falhou: $(tail -3 "$TMP/r2" | tr '\n' ' ')"
+  em_casa 'grep -q "v2" openrange/www/index.html' || erro "atualização: arquivo alterado não veio"
+  em_casa 'test -f openrange/www/novo.txt' || erro "atualização: arquivo novo não veio"
+  em_casa 'test -e openrange/www/video/index.html' && erro "atualização: arquivo removido continua lá"
+  em_casa 'test "$(cat openrange/config/apps-proprios.json)" != "[]"' || erro "atualização: sobrescreveu a configuração do usuário"
+  em_casa 'grep -q "# meu" openrange/tools/repetir.py' && erro "atualização: código editado não voltou ao do GitHub"
+  em_casa 'ls openrange/.openrange/backup/*/tools/repetir.py >/dev/null 2>&1' || erro "atualização: sem cópia do código editado"
+  em_casa 'test -f openrange/config/openrange.json && test -s openrange/certs/cert.pem' || erro "atualização: perdeu config/certificado"
+  t2=$(raiz 'systemctl show -p ActiveEnterTimestampMonotonic --value openrange.service')
+  [[ $t2 != "$t1" ]] || erro "atualização: serviço não reiniciou"
+  raiz 'systemctl is-active -q openrange.service' || erro "atualização: serviço parado"
+  em_casa "OPENRANGE_URL=file:///tmp/v2.tar.gz bash /tmp/install.sh" 2>&1 | grep -q "versão mais recente" \
+    || erro "3ª vez: devia dizer que já está atualizado"
+  echo "remoto: $(grep -c '^   ' "$TMP/r2") mudanças na atualização · $(grep -o 'mantido (sua versão): [^ ]*' "$TMP/r2" | head -1)"
+  podman rm -f "$C" >/dev/null
+fi
+
 (( erros )) && { echo "instalação limpa: $erros erro(s)"; exit 1; }
 echo "instalação limpa ok"

@@ -61,7 +61,7 @@ if (( TUDO )); then
   fi
 fi
 
-(( LIMPA )) && r "instalação em sistemas limpos" "ERRO|^[a-z]+: polkit|ok$" timeout 1800 "$AQUI/instalacao-limpa.sh"
+(( LIMPA )) && r "instalação em sistemas limpos" "ERRO|^[a-z]+: polkit|^remoto:|ok$" timeout 1800 "$AQUI/instalacao-limpa.sh"
 
 echo
 (( falhas )) && { echo "FALHOU: $falhas teste(s) (veja com -v)"; exit 1; }
