@@ -24,7 +24,8 @@ What you get:
 - **Jellyfin client** for the TV: libraries, series, music, resume, subtitles (drawn by the app), audio tracks,
   trickplay and Quick Connect. It talks to your own Jellyfin server; servers can be added from a phone with a QR code.
 - **Control panel** in the PC's browser at `http://localhost:8090/painel/`: status, first steps, apps and icons,
-  store favorites, network/DNS and live logs.
+  store favorites, network/DNS and live logs. To use it from another device on the LAN, list its IP (or network) in
+  `painel.ips_extras` of `config/openrange.json` (the panel has no password: list only devices you trust).
 - Feature and video test pages for the TV's browser.
 
 The user interface is in Portuguese (Brazil).

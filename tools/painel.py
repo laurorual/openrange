@@ -3,7 +3,8 @@
 
 Only the PC itself may use it: the client must be loopback or the PC's own IP, the Host header must name this PC
 (blocks DNS rebinding) and every call carries `X-OpenRange: 1` (a cross-site page can't send it without a CORS
-preflight, which the portal refuses for /painel/). Other LAN devices get 403.
+preflight, which the portal refuses for /painel/). Other LAN devices get 403, except those listed in
+painel.ips_extras of config/openrange.json (never the TV).
 
   GET  estado                  service, TV contact (ping, last DNS/HTTP), network, pending restart
   POST diagnostico             output of `tools/openrange.sh saude`
@@ -135,14 +136,25 @@ def visto(ip, caminho, ua):
 
 
 # --- access control ---------------------------------------------------------------------------------
+def _ips_extras():
+    """painel.ips_extras as networks (config.validar_ips_painel), re-read on every call. Unreadable → none."""
+    try:
+        lista = _ler_bruto().get("painel", {}).get("ips_extras", [])
+        return [ipaddress.ip_network(x) for x in config.validar_ips_painel(lista)[0]]
+    except (OSError, ValueError, AttributeError):
+        return []
+
+
 def permitido(cliente, host, cabecalho):
     """None if allowed, else the reason (Portuguese, shown on the page)."""
     pc = CTX["pc_ip"]
     try:
-        local = ipaddress.ip_address(cliente).is_loopback or cliente == pc
+        ip = ipaddress.ip_address(cliente)
+        local = ip.is_loopback or cliente == pc
+        liberado = not local and cliente != _tv_ip_atual() and any(ip in r for r in _ips_extras())
     except ValueError:
-        local = False
-    if not local:
+        local = liberado = False
+    if not (local or liberado):
         return f"o painel só funciona no próprio PC: abra http://localhost:{CTX.get('porta', 8090)}/painel/ nele"
     h = (host or "").strip().lower()
     nome = h[1:h.find("]")] if h.startswith("[") else h.split(":")[0]

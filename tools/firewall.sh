@@ -18,12 +18,16 @@ regras=()
 for p in "$PORTA_DNS/udp" "$PORTA_DNS/tcp" "$PORTA_HTTP/tcp" "$PORTA_HTTPS/tcp" "$PORTA_CELULAR/tcp"; do
   regras+=("rule family=ipv4 source address=$TV_IP port port=${p%/*} protocol=${p#*/} accept")
 done
+for ip in $PAINEL_IPS; do      # painel.ips_extras, validated by config.py
+  regras+=("rule family=ipv4 source address=$ip port port=$PORTA_CELULAR protocol=tcp accept")
+done
 case "${1:-ver}" in
   abrir)  # rules for an OLD TV IP (rede.tv_ip changed): same shape and ports as ours, other source → removed
           portas_re="($PORTA_DNS|$PORTA_HTTP|$PORTA_HTTPS|$PORTA_CELULAR)"
           while IFS= read -r r; do
-            [[ $r =~ ^rule\ family=\"?ipv4\"?\ source\ address=\"?([0-9.]+)\"?\ port\ port=\"?$portas_re\"?\ protocol=\"?(tcp|udp)\"?\ accept$ ]] || continue
+            [[ $r =~ ^rule\ family=\"?ipv4\"?\ source\ address=\"?([0-9./]+)\"?\ port\ port=\"?$portas_re\"?\ protocol=\"?(tcp|udp)\"?\ accept$ ]] || continue
             [[ ${BASH_REMATCH[1]} == "$TV_IP" ]] && continue
+            [[ ${BASH_REMATCH[2]} == "$PORTA_CELULAR" && " $PAINEL_IPS " == *" ${BASH_REMATCH[1]} "* ]] && continue
             firewall-cmd -q --zone="$FW_ZONE" --remove-rich-rule="$r" && echo "firewall: regra antiga removida ($r)"
           done < <(firewall-cmd --zone="$FW_ZONE" --list-rich-rules 2>/dev/null)
           for r in "${regras[@]}"; do firewall-cmd -q --zone="$FW_ZONE" --query-rich-rule="$r" || firewall-cmd -q --zone="$FW_ZONE" --add-rich-rule="$r"; done

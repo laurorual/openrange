@@ -15,6 +15,7 @@ Em Python:  sys.path.insert(0, "tools"); import config; cfg = config.carregar()
 OPENRANGE_SO_LER=1 → writes nothing (no rede.env/redirects.txt, no last IP): for whoever runs as root.
 """
 import copy
+import ipaddress
 import json
 import os
 import re
@@ -48,6 +49,7 @@ PADRAO = {
     "portas": {"dns": 53, "http": 80, "https": 443, "celular": 8090},
     "launcher": {"favoritos": [], "substituir_loja": True},
     "logs": {"max_mb": 5, "manter": 3},
+    "painel": {"ips_extras": []},
 }
 
 
@@ -136,6 +138,22 @@ def _mesclar(base, extra):
     for k, v in (extra or {}).items():
         r[k] = _mesclar(r[k], v) if isinstance(v, dict) and isinstance(r.get(k), dict) else v
     return r
+
+
+def validar_ips_painel(lista):
+    """(valid, problems) for painel.ips_extras: IPv4 addresses or networks of the LAN (private ranges, at most /16).
+    The panel has no password, so a typo must never open it to the internet."""
+    ok, ruins = [], []
+    for x in lista if isinstance(lista, list) else [lista]:
+        try:
+            rede = ipaddress.ip_network(str(x).strip(), strict=False)
+        except ValueError:
+            rede = None
+        if rede and rede.version == 4 and rede.prefixlen >= 16 and rede.is_private and not rede.is_loopback:
+            ok.append(str(rede.network_address) if rede.prefixlen == 32 else str(rede))
+        else:
+            ruins.append(f"painel.ips_extras: {x!r} ignorado (só IPv4 da rede local, ex. 192.168.0.20 ou 192.168.0.0/24)")
+    return ok, ruins
 
 
 def validar_redirects(lista):
@@ -276,11 +294,14 @@ def main():
               f"ponha {cfg['rede']['pc_ip']} como DNS na TV.", file=sys.stderr)
     if cmd == "env":
         r = cfg["rede"]
+        painel_ips, ruins = validar_ips_painel(cfg["painel"]["ips_extras"])
+        for p in ruins:
+            print(f"config: {p}", file=sys.stderr)
         for k, v in (("PC_IP", r["pc_ip"]), ("TV_IP", r["tv_ip"]), ("IFACE", r["interface"]), ("GATEWAY", r["gateway"]),
                      ("FW_ZONE", r["zona_firewall"]), ("PORTA_DNS", cfg["portas"]["dns"]), ("PORTA_HTTP", cfg["portas"]["http"]),
                      ("PORTA_HTTPS", cfg["portas"]["https"]), ("PORTA_CELULAR", cfg["portas"]["celular"]),
                      ("DNS_EMBUTIDO", "1" if cfg["dns"]["embutido"] else "0"),
-                     ("REDIRECTS", " ".join(cfg["redirects"]))):
+                     ("REDIRECTS", " ".join(cfg["redirects"])), ("PAINEL_IPS", " ".join(painel_ips))):
             print(f"{k}='{v}'")
     elif cmd == "mostrar":
         print(json.dumps({k: v for k, v in cfg.items() if not k.startswith("_") or k == "_auto"}, ensure_ascii=False, indent=2))
