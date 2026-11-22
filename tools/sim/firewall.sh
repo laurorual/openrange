@@ -24,5 +24,6 @@ PATH="$T:$PATH" bash "$RAIZ/tools/firewall.sh" abrir >/dev/null
 removidas=$(grep -c -- '--remove-rich-rule' "$T/chamadas")
 adicionadas=$(grep -c -- '--add-rich-rule' "$T/chamadas")
 ruins=$(grep -- '--remove-rich-rule' "$T/chamadas" | grep -c -e "$TV_IP" -e 'port="22"')
-if [[ $removidas == 2 && $adicionadas == 5 && $ruins == 0 ]]; then echo "firewall ok (2 regras do IP antigo removidas, 5 da TV adicionadas)"
+esperadas=$((5 + $(wc -w <<<"$PAINEL_IPS")))      # 5 for the TV + 1 per painel.ips_extras entry of this config
+if [[ $removidas == 2 && $adicionadas == $esperadas && $ruins == 0 ]]; then echo "firewall ok (2 regras do IP antigo removidas, $esperadas adicionadas)"
 else echo "ERRO firewall: removidas=$removidas adicionadas=$adicionadas erradas=$ruins"; cat "$T/chamadas"; exit 1; fi
