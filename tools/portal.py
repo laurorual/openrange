@@ -619,8 +619,8 @@ class Handler(BaseHTTPRequestHandler):
 class Servidor(ThreadingHTTPServer):
     daemon_threads = True
 
-    def __init__(self, porta, ctx=None):
-        super().__init__(("0.0.0.0", porta), Handler)
+    def __init__(self, porta, ctx, endereco):
+        super().__init__((endereco, porta), Handler)
         self.ctx = ctx
 
     def finish_request(self, sock, addr):
@@ -665,8 +665,10 @@ def main():
         pass
     ctx.load_cert_chain(CERT, CHAVE)
     painel.configurar(pc_ip=PC_IP, log=log, catalogo=catalogo_real, dns=None, porta=PORTA_CELULAR)
-    for porta, c in ((PORTA_HTTP, None), (PORTA_HTTPS, ctx), (PORTA_CELULAR, None)):
-        threading.Thread(target=Servidor(porta, c).serve_forever, daemon=True).start()
+    # :80/:443 only on PC_IP, like the DNS: the TV reaches them there, and a 0.0.0.0 bind fails if another service
+    # owns the port on another address of this PC (e.g. Tailscale Serve on the tailnet IP)
+    for porta, c, endereco in ((PORTA_HTTP, None, PC_IP), (PORTA_HTTPS, ctx, PC_IP), (PORTA_CELULAR, None, "0.0.0.0")):
+        threading.Thread(target=Servidor(porta, c, endereco).serve_forever, daemon=True).start()
     for g in config.girar_logs(CFG):
         log(f"log girado: {g}")
     def girar_de_hora_em_hora():
